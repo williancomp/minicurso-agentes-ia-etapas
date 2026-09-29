@@ -1,50 +1,36 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+# Constituição — Reserva de Salas UFMT
 
-## Core Principles
+## Princípios
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Regras de negócio no domínio
+Toda regra da especificação vive em `src/domain/` como função pura (sem React, sem banco, sem relógio
+escondido: `agora` chega por parâmetro). API e interface **usam** essas funções; não as reimplementam.
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+### II. Todo critério tem teste (INEGOCIÁVEL)
+Cada critério de aceitação `CA-xx` tem ao menos um teste automatizado que o cita no nome. Tarefas de teste
+são obrigatórias em `tasks.md`, não opcionais. Os testes de `tests/aceitacao/` são mantidos à parte e não podem
+ser alterados para passar.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### III. A API é a fonte da verdade
+A API valida tudo — entrada, permissões e regras —, mesmo que a interface já valide. Esconder um botão não é
+controle de acesso.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### IV. Contrato estável
+As assinaturas de `docs/api-dominio.md` (nomes, parâmetros, códigos de erro) não mudam sem atualizar esse
+documento e os testes de aceitação.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### V. Simples e portátil
+Sem dependências novas sem justificativa; nenhuma dependência nativa; scripts npm que funcionem no Windows.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+## Restrições técnicas
+TypeScript estrito · React + Tailwind + shadcn/ui · API Hono · `node:sqlite` · Vitest · código e mensagens em
+português · erros da API no formato `{ erro, codigo? }`.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+## Fluxo de trabalho
+Antes de concluir uma tarefa: `npm test` e `npm run lint` passam; o diff é mostrado à pessoa; commits só com
+pedido explícito. Ver também `AGENTS.md`.
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+## Governança
+Esta constituição prevalece sobre preferências do agente. Mudanças exigem registro aqui, com data.
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
-
-## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
-
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
-
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Versão**: 1.0.0 | **Ratificada**: 2026-10-01 | **Última alteração**: 2026-10-01
