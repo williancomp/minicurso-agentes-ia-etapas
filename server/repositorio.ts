@@ -71,3 +71,26 @@ export function contarReservasPorSala(db: Banco, de: string, ate: string): Recor
     .all(ate, de) as { sala_id: string; total: number }[]
   return Object.fromEntries(linhas.map((l) => [l.sala_id, Number(l.total)]))
 }
+
+/** Todas as reservas da sala, de qualquer status (as regras de domínio decidem o que conta). */
+export function listarTodasReservasDaSala(db: Banco, salaId: string): Reserva[] {
+  return (db.prepare('SELECT * FROM reservas WHERE sala_id = ? ORDER BY inicio').all(salaId) as Linha[]).map(
+    paraReserva,
+  )
+}
+
+export function inserirReserva(db: Banco, reserva: Reserva): void {
+  db.prepare(
+    `INSERT INTO reservas (id, sala_id, usuario_id, inicio, fim, motivo, status, criada_em)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).run(
+    reserva.id,
+    reserva.salaId,
+    reserva.usuarioId,
+    reserva.inicio,
+    reserva.fim,
+    reserva.motivo,
+    reserva.status,
+    reserva.criadaEm,
+  )
+}

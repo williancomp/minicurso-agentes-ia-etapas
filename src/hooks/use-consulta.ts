@@ -15,7 +15,7 @@ interface Resultado<T> {
 
 /**
  * Executa `buscar` ao montar e sempre que `dependencias` mudarem (comparadas por valor).
- * Enquanto a nova busca não termina, `dados` fica indefinido e `carregando` é verdadeiro.
+ * Enquanto a nova busca não termina, `carregando` é verdadeiro e `dados` mantém o último resultado.
  */
 export function useConsulta<T>(buscar: () => Promise<T>, dependencias: unknown[]): EstadoConsulta<T> {
   const [versao, setVersao] = useState(0)
@@ -38,7 +38,7 @@ export function useConsulta<T>(buscar: () => Promise<T>, dependencias: unknown[]
   const recarregar = useCallback(() => setVersao((v) => v + 1), [])
   const atual = resultado.chave === chave
   return {
-    dados: atual ? resultado.dados : undefined,
+    dados: resultado.dados,
     erro: atual ? resultado.erro : undefined,
     carregando: !atual,
     recarregar,

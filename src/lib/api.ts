@@ -40,6 +40,15 @@ export async function chamarApi<T>(caminho: string, init?: RequestInit): Promise
   return corpo as T
 }
 
+export interface DadosNovaReserva {
+  salaId: string
+  inicio: string
+  fim: string
+  motivo: string
+}
+
+const comoUsuario = (usuarioId: string) => ({ 'X-Usuario-Id': usuarioId })
+
 export const api = {
   listarSalas: () => chamarApi<SalaComResumo[]>('/salas'),
   buscarSala: (id: string) => chamarApi<Sala>(`/salas/${encodeURIComponent(id)}`),
@@ -48,4 +57,6 @@ export const api = {
     chamarApi<Reserva[]>(
       `/salas/${encodeURIComponent(id)}/reservas?de=${de.toISOString()}&ate=${ate.toISOString()}`,
     ),
+  criarReserva: (dados: DadosNovaReserva, usuarioId: string) =>
+    chamarApi<Reserva>('/reservas', { method: 'POST', body: JSON.stringify(dados), headers: comoUsuario(usuarioId) }),
 }

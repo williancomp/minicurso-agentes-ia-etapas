@@ -1,8 +1,9 @@
 import { addDays, format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { ArrowLeft, CalendarDays, ChevronLeft, ChevronRight, DoorClosed, Info, MapPin, Users } from 'lucide-react'
+import { ArrowLeft, CalendarDays, CalendarPlus, ChevronLeft, ChevronRight, DoorClosed, Info, MapPin, Users } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { AgendaSemanal } from '@/components/agenda-semanal'
+import { DialogoNovaReserva, type SugestaoHorario } from '@/components/dialogo-nova-reserva'
 import { EstadoErro, EstadoVazio } from '@/components/estados'
 import { IconeRecurso } from '@/components/icone-recurso'
 import { IconeSala } from '@/components/icone-sala'
@@ -13,6 +14,7 @@ import { NOMES_RECURSOS, NOMES_TIPOS } from '@/domain/salas'
 import { useConsulta } from '@/hooks/use-consulta'
 import { api, ErroApi } from '@/lib/api'
 import { useUsuario } from '@/lib/usuario'
+import { cn } from '@/lib/utils'
 
 export function PaginaSala({ id }: { id: string }) {
   const { usuarios, usuarioAtual } = useUsuario()
@@ -21,6 +23,7 @@ export function PaginaSala({ id }: { id: string }) {
 
   const sala = useConsulta(() => api.buscarSala(id), [id])
   const reservas = useConsulta(() => api.listarReservasDaSala(id, segunda, addDays(segunda, 7)), [id, segunda])
+  const [dialogo, setDialogo] = useState<{ aberto: boolean; sugestao?: SugestaoHorario }>({ aberto: false })
 
   if (sala.erro instanceof ErroApi && sala.erro.status === 404) {
     return (
@@ -96,7 +99,10 @@ export function PaginaSala({ id }: { id: string }) {
               {reservas.dados && ` · ${totalSemana} ${totalSemana === 1 ? 'reserva' : 'reservas'}`}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button onClick={() => setDialogo({ aberto: true })} disabled={!sala.dados} className="shadow-primary/25 mr-auto shadow-md sm:mr-2">
+              <CalendarPlus /> Nova reserva
+            </Button>
             <Button variant="outline" size="icon" aria-label="Semana anterior" onClick={() => setSegunda(addDays(segunda, -7))}>
               <ChevronLeft />
             </Button>
@@ -115,7 +121,17 @@ export function PaginaSala({ id }: { id: string }) {
           <Skeleton className="h-[720px] rounded-2xl" />
         ) : (
           <>
-            <AgendaSemanal dias={dias} reservas={reservas.dados} usuarios={usuarios} usuarioAtualId={usuarioAtual?.id} />
+            <AgendaSemanal
+              className={cn('transition-opacity', reservas.carregando && 'opacity-60')}
+              dias={dias}
+              reservas={reservas.dados}
+              usuarios={usuarios}
+              usuarioAtualId={usuarioAtual?.id}
+              aoSelecionarHorario={(inicio) => setDialogo({ aberto: true, sugestao: { inicio } })}
+            />
+            <p className="text-muted-foreground text-center text-xs">
+              Dica: clique em um horário vazio da agenda para reservar a partir dele.
+            </p>
             {totalSemana === 0 && (
               <p className="text-muted-foreground flex items-center justify-center gap-2 text-sm">
                 <Info className="size-4" /> Nenhuma reserva nesta semana — a sala está livre em todos os horários.
@@ -124,6 +140,16 @@ export function PaginaSala({ id }: { id: string }) {
           </>
         )}
       </section>
+
+      {sala.dados && (
+        <DialogoNovaReserva
+          sala={sala.dados}
+          sugestao={dialogo.sugestao}
+          aberto={dialogo.aberto}
+          aoMudarAberto={(aberto) => setDialogo((atual) => ({ ...atual, aberto }))}
+          aoCriar={reservas.recarregar}
+        />
+      )}
     </div>
   )
 }

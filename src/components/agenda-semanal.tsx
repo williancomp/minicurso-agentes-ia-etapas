@@ -40,11 +40,16 @@ export function AgendaSemanal({
   reservas,
   usuarios,
   usuarioAtualId,
+  aoSelecionarHorario,
+  className,
 }: {
+  className?: string
   dias: Date[]
   reservas: Reserva[]
   usuarios: Usuario[]
   usuarioAtualId?: string
+  /** Clique em um espaço vazio da grade: recebe o início (arredondado para 30 min). */
+  aoSelecionarHorario?: (inicio: Date) => void
 }) {
   const agora = useAgora()
   const nomeDe = (id: string) => usuarios.find((u) => u.id === id)?.nome ?? id
@@ -53,7 +58,7 @@ export function AgendaSemanal({
   const mostrarLinhaAgora = minutosDesdeAbertura >= 0 && agora.getHours() < HORA_FECHAMENTO
 
   return (
-    <div className="bg-card overflow-x-auto rounded-2xl border shadow-sm">
+    <div className={cn('bg-card overflow-x-auto rounded-2xl border shadow-sm', className)}>
       <div className="min-w-[760px]">
         {/* Cabeçalho com os dias */}
         <div className="bg-muted/40 sticky top-0 grid grid-cols-[4rem_repeat(var(--dias),1fr)] border-b" style={{ '--dias': dias.length } as React.CSSProperties}>
@@ -98,11 +103,28 @@ export function AgendaSemanal({
             return (
               <div
                 key={dia.toISOString()}
-                className={cn('relative border-l', hoje && 'bg-primary/[0.03]', passado && 'hachurado')}
+                className={cn(
+                  'group/dia relative border-l',
+                  hoje && 'bg-primary/[0.03]',
+                  passado && 'hachurado',
+                  aoSelecionarHorario && !passado && 'cursor-copy',
+                )}
                 style={{ height: HORAS.length * ALTURA_HORA }}
+                onClick={(evento) => {
+                  if (!aoSelecionarHorario || passado || evento.target !== evento.currentTarget) return
+                  const y = evento.nativeEvent.offsetY
+                  const meiasHoras = Math.floor(y / (ALTURA_HORA / 2))
+                  const inicio = new Date(dia)
+                  inicio.setHours(HORA_ABERTURA, meiasHoras * 30, 0, 0)
+                  aoSelecionarHorario(inicio)
+                }}
               >
                 {HORAS.map((h, i) => (
-                  <div key={h} className="border-border/60 absolute inset-x-0 border-t" style={{ top: i * ALTURA_HORA }} />
+                  <div
+                    key={h}
+                    className="border-border/60 pointer-events-none absolute inset-x-0 border-t"
+                    style={{ top: i * ALTURA_HORA }}
+                  />
                 ))}
 
                 {posicionarNaGrade(reservas, dia).map(({ reserva, topo, altura }) => {
