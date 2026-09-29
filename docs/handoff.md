@@ -1,17 +1,17 @@
-# Handoff — 01/10, após a funcionalidade 2
+# Handoff — 01/10
 
 ## Estado
-- Funcionalidade 1 (criar reserva, CA-01..CA-06) e funcionalidade 2 (minhas reservas, cancelamento e
-  disponibilidade, CA-07..CA-13) implementadas; tarefas T001..T017 de `specs/001-minhas-reservas/tasks.md` concluídas.
+- Funcionalidades 1 e 2 implementadas e verificadas (CA-01..CA-13) — evidência em `docs/verification.md`.
+- Spec Kit configurado (`.specify/`, `.opencode/commands/`) com a feature `specs/001-minhas-reservas/`.
+- Skill própria `.opencode/skills/revisar-criterios/` para revisar critérios antes de planejar.
 - `npm test`, `npm run lint`, `npm run build` e `npm run test:aceitacao` passando.
 
 ## Decisões
-- Só o dono cancela, verificado na API (403 `NAO_E_DONO`); reserva iniciada não se cancela (`JA_INICIADA`).
-- Cancelar muda o status (não apaga); cancelada não bloqueia horário.
-- Disponibilidade reutiliza a regra de sobreposição da funcionalidade 1 (encostado = disponível).
+- Regras no domínio, API como fonte da verdade, todo CA com teste (ver `.specify/memory/constitution.md`).
+- Contexto portátil: este arquivo + `AGENTS.md` + specs versionadas; a sessão do agente é complementar.
 
 ## Problemas conhecidos
-- Nenhum conhecido.
+- Nenhum.
 
 ## Próximo passo
-- Revisão independente do código e dos testes; registrar a evidência em `docs/verification.md`.
+- Candidatas fora do escopo atual: edição de reserva, reservas recorrentes, aprovação por gestor.
