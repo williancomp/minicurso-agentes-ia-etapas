@@ -54,16 +54,22 @@ export function CartaoSala({ sala }: { sala: SalaComResumo }) {
           <Badge variant="outline" className="text-muted-foreground font-normal">
             {NOMES_TIPOS[sala.tipo]}
           </Badge>
-          <Badge
-            variant="secondary"
-            className={
-              sala.reservasHoje === 0
-                ? 'bg-success/15 text-success'
-                : 'bg-warning/20 text-amber-700 dark:text-warning'
-            }
-          >
-            {sala.reservasHoje === 0 ? 'Livre hoje' : `${sala.reservasHoje} hoje`}
-          </Badge>
+          {sala.disponivel ? (
+            <Badge variant="secondary" className="bg-success/15 text-success">
+              Livre no horário
+            </Badge>
+          ) : (
+            <Badge
+              variant="secondary"
+              className={
+                sala.reservasHoje === 0
+                  ? 'bg-success/15 text-success'
+                  : 'bg-warning/20 text-amber-700 dark:text-warning'
+              }
+            >
+              {sala.reservasHoje === 0 ? 'Livre hoje' : `${sala.reservasHoje} hoje`}
+            </Badge>
+          )}
         </div>
       </div>
     </a>

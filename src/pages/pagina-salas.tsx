@@ -1,21 +1,29 @@
-import { Building2, DoorOpen, SearchX, Sparkles } from 'lucide-react'
+import { Building2, CalendarX2, DoorOpen, SearchX, Sparkles } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { CartaoSala } from '@/components/cartao-sala'
 import { EstadoErro, EstadoVazio } from '@/components/estados'
+import { FiltroDisponibilidade, type Disponibilidade } from '@/components/filtro-disponibilidade'
 import { FiltrosSalas } from '@/components/filtros-salas'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { filtrarSalas, listarBlocos, type FiltroSalas } from '@/domain/salas'
 import { useConsulta } from '@/hooks/use-consulta'
 import { api } from '@/lib/api'
+import { intervaloLocal } from '@/lib/horarios'
 import { useUsuario } from '@/lib/usuario'
+import { cn } from '@/lib/utils'
 
 export function PaginaSalas() {
-  const { dados: salas, erro, carregando, recarregar } = useConsulta(api.listarSalas, [])
+  const [disponibilidade, setDisponibilidade] = useState<Disponibilidade>()
+  const intervalo = disponibilidade && disponibilidade.fim > disponibilidade.inicio ? intervaloLocal(disponibilidade.data, disponibilidade.inicio, disponibilidade.fim) : undefined
+  const { dados: salas, erro, carregando, recarregar } = useConsulta(() => api.listarSalas(intervalo), [intervalo])
   const { usuarioAtual } = useUsuario()
   const [filtro, setFiltro] = useState<FiltroSalas>({})
 
-  const visiveis = useMemo(() => filtrarSalas(salas ?? [], filtro), [salas, filtro])
+  const visiveis = useMemo(
+    () => filtrarSalas(salas ?? [], filtro).filter((sala) => !intervalo || sala.disponivel !== false),
+    [salas, filtro, intervalo],
+  )
   const blocos = useMemo(() => listarBlocos(salas ?? []), [salas])
   const livresHoje = salas?.filter((s) => s.reservasHoje === 0).length ?? 0
   const primeiroNome = usuarioAtual?.nome.replace(/^(Prof\.|Profa\.)\s*/, '').split(' ')[0]
@@ -45,7 +53,10 @@ export function PaginaSalas() {
         </div>
       </section>
 
-      <FiltrosSalas filtro={filtro} blocos={blocos} aoMudar={setFiltro} />
+      <div className="space-y-3">
+        <FiltrosSalas filtro={filtro} blocos={blocos} aoMudar={setFiltro} />
+        <FiltroDisponibilidade valor={disponibilidade} aoMudar={setDisponibilidade} />
+      </div>
 
       {erro ? (
         <EstadoErro erro={erro} aoTentarDeNovo={recarregar} />
@@ -55,6 +66,17 @@ export function PaginaSalas() {
             <Skeleton key={i} className="h-60 rounded-2xl" />
           ))}
         </div>
+      ) : visiveis.length === 0 && intervalo && filtrarSalas(salas ?? [], filtro).length > 0 ? (
+        <EstadoVazio
+          icone={CalendarX2}
+          titulo="Todas ocupadas nesse horário"
+          descricao="As salas que atendem aos filtros já estão reservadas nesse intervalo. Tente outro horário ou outro dia."
+          acao={
+            <Button variant="outline" onClick={() => setDisponibilidade(undefined)}>
+              Ver todas as salas
+            </Button>
+          }
+        />
       ) : visiveis.length === 0 ? (
         <EstadoVazio
           icone={SearchX}
@@ -69,11 +91,13 @@ export function PaginaSalas() {
       ) : (
         <>
           <p className="text-muted-foreground text-sm">
-            {visiveis.length === salas?.length
-              ? `${visiveis.length} salas disponíveis no sistema`
-              : `${visiveis.length} de ${salas?.length} salas`}
+            {intervalo
+              ? `${visiveis.length} ${visiveis.length === 1 ? 'sala livre' : 'salas livres'} no horário escolhido`
+              : visiveis.length === salas?.length
+                ? `${visiveis.length} salas cadastradas`
+                : `${visiveis.length} de ${salas?.length} salas`}
           </p>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className={cn('grid gap-4 transition-opacity sm:grid-cols-2 lg:grid-cols-3', carregando && 'opacity-60')}>
             {visiveis.map((sala) => (
               <CartaoSala key={sala.id} sala={sala} />
             ))}

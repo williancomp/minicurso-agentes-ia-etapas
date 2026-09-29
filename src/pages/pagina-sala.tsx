@@ -127,10 +127,12 @@ export function PaginaSala({ id }: { id: string }) {
               reservas={reservas.dados}
               usuarios={usuarios}
               usuarioAtualId={usuarioAtual?.id}
+              salaId={id}
               aoSelecionarHorario={(inicio) => setDialogo({ aberto: true, sugestao: { inicio } })}
             />
-            <p className="text-muted-foreground text-center text-xs">
-              Dica: clique em um horário vazio da agenda para reservar a partir dele.
+            <p className="text-muted-foreground flex items-center justify-center gap-2 text-xs">
+              <span className="border-success/60 bg-success/10 inline-block size-3 rounded border border-dashed" />
+              Horários livres — clique em um deles para reservar.
             </p>
             {totalSemana === 0 && (
               <p className="text-muted-foreground flex items-center justify-center gap-2 text-sm">

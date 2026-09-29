@@ -44,3 +44,8 @@ export interface Reserva {
   status: StatusReserva
   criadaEm: string
 }
+
+/** Reserva acompanhada dos dados básicos da sala (usada em "Minhas reservas"). */
+export interface ReservaComSala extends Reserva {
+  sala: Pick<Sala, 'id' | 'nome' | 'bloco' | 'tipo'>
+}

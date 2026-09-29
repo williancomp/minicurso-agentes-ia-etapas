@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { Hono, type Context } from 'hono'
+import { podeCancelar, salaDisponivel, type CodigoRecusaCancelamento } from '../src/domain/minhas-reservas'
 import { validarReserva, type CodigoRejeicao } from '../src/domain/reservas'
 import type { Reserva } from '../src/domain/tipos'
 import { abrirBanco, type Banco } from './db'
@@ -18,7 +19,18 @@ const STATUS_REJEICAO: Record<CodigoRejeicao, 409 | 422> = {
   CONFLITO: 409,
 }
 
+const STATUS_RECUSA_CANCELAMENTO: Record<CodigoRecusaCancelamento, 403 | 409 | 422> = {
+  NAO_E_DONO: 403,
+  JA_CANCELADA: 409,
+  JA_INICIADA: 422,
+}
+
 const TAMANHO_MAXIMO_MOTIVO = 120
+
+function lerIntervalo(de: string | undefined, ate: string | undefined) {
+  if (!de || !ate || Number.isNaN(Date.parse(de)) || Number.isNaN(Date.parse(ate))) return undefined
+  return { inicio: new Date(de).toISOString(), fim: new Date(ate).toISOString() }
+}
 
 /** Usuário "logado": o front-end envia o id escolhido no seletor no cabeçalho X-Usuario-Id. */
 function usuarioDaRequisicao(c: Context, db: Banco) {
@@ -34,13 +46,23 @@ export function criarApp({ db = abrirBanco(':memory:'), agora = () => new Date()
 
   app.get('/usuarios', (c) => c.json(repo.listarUsuarios(db)))
 
+  // Com ?inicio=…&fim=… (ISO 8601), cada sala vem com `disponivel` naquele intervalo.
   app.get('/salas', (c) => {
     const hoje = new Date()
     hoje.setHours(0, 0, 0, 0)
     const amanha = new Date(hoje)
     amanha.setDate(hoje.getDate() + 1)
     const reservasHoje = repo.contarReservasPorSala(db, hoje.toISOString(), amanha.toISOString())
-    return c.json(repo.listarSalas(db).map((sala) => ({ ...sala, reservasHoje: reservasHoje[sala.id] ?? 0 })))
+    const salas = repo.listarSalas(db).map((sala) => ({ ...sala, reservasHoje: reservasHoje[sala.id] ?? 0 }))
+
+    const consulta = c.req.query()
+    if (consulta.inicio === undefined && consulta.fim === undefined) return c.json(salas)
+    const intervalo = lerIntervalo(consulta.inicio, consulta.fim)
+    if (!intervalo || !(intervalo.fim > intervalo.inicio)) {
+      return c.json({ erro: 'Informe um intervalo válido: "inicio" anterior a "fim", em ISO 8601.' }, 400)
+    }
+    const reservas = repo.listarReservasNoIntervalo(db, intervalo.inicio, intervalo.fim)
+    return c.json(salas.map((sala) => ({ ...sala, disponivel: salaDisponivel(reservas, sala.id, intervalo) })))
   })
 
   app.get('/salas/:id', (c) => {
@@ -53,14 +75,9 @@ export function criarApp({ db = abrirBanco(':memory:'), agora = () => new Date()
   app.get('/salas/:id/reservas', (c) => {
     const sala = repo.buscarSala(db, c.req.param('id'))
     if (!sala) return c.json({ erro: 'Sala não encontrada.' }, 404)
-    const de = c.req.query('de')
-    const ate = c.req.query('ate')
-    if (!de || !ate || Number.isNaN(Date.parse(de)) || Number.isNaN(Date.parse(ate))) {
-      return c.json({ erro: 'Informe os parâmetros "de" e "ate" em ISO 8601.' }, 400)
-    }
-    const deIso = new Date(de).toISOString()
-    const ateIso = new Date(ate).toISOString()
-    return c.json(repo.listarReservasDaSala(db, sala.id, deIso, ateIso))
+    const intervalo = lerIntervalo(c.req.query('de'), c.req.query('ate'))
+    if (!intervalo) return c.json({ erro: 'Informe os parâmetros "de" e "ate" em ISO 8601.' }, 400)
+    return c.json(repo.listarReservasDaSala(db, sala.id, intervalo.inicio, intervalo.fim))
   })
 
   app.post('/reservas', async (c) => {
@@ -97,6 +114,29 @@ export function criarApp({ db = abrirBanco(':memory:'), agora = () => new Date()
     const reserva: Reserva = { ...nova, id: randomUUID(), status: 'ativa', criadaEm: agora().toISOString() }
     repo.inserirReserva(db, reserva)
     return c.json(reserva, 201)
+  })
+
+  app.get('/reservas/minhas', (c) => {
+    const usuario = usuarioDaRequisicao(c, db)
+    if (!usuario) return c.json({ erro: 'Selecione um usuário.' }, 401)
+    return c.json(repo.listarReservasDoUsuario(db, usuario.id))
+  })
+
+  app.post('/reservas/:id/cancelar', (c) => {
+    const usuario = usuarioDaRequisicao(c, db)
+    if (!usuario) return c.json({ erro: 'Selecione um usuário.' }, 401)
+    const reserva = repo.buscarReserva(db, c.req.param('id'))
+    if (!reserva) return c.json({ erro: 'Reserva não encontrada.' }, 404)
+
+    const resultado = podeCancelar(reserva, usuario.id, agora())
+    if (!resultado.ok) {
+      return c.json(
+        { erro: resultado.mensagem, codigo: resultado.codigo },
+        STATUS_RECUSA_CANCELAMENTO[resultado.codigo],
+      )
+    }
+    repo.marcarComoCancelada(db, reserva.id)
+    return c.json({ ...reserva, status: 'cancelada' })
   })
 
   app.notFound((c) => c.json({ erro: 'Rota não encontrada.' }, 404))

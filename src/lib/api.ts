@@ -1,4 +1,4 @@
-import type { Reserva, Sala, Usuario } from '@/domain/tipos'
+import type { Reserva, ReservaComSala, Sala, Usuario } from '@/domain/tipos'
 
 export class ErroApi extends Error {
   constructor(
@@ -11,6 +11,8 @@ export class ErroApi extends Error {
 
 export interface SalaComResumo extends Sala {
   reservasHoje: number
+  /** Presente quando a listagem é consultada com um intervalo (?inicio&fim). */
+  disponivel?: boolean
 }
 
 /**
@@ -50,7 +52,10 @@ export interface DadosNovaReserva {
 const comoUsuario = (usuarioId: string) => ({ 'X-Usuario-Id': usuarioId })
 
 export const api = {
-  listarSalas: () => chamarApi<SalaComResumo[]>('/salas'),
+  listarSalas: (intervalo?: { inicio: Date; fim: Date }) =>
+    chamarApi<SalaComResumo[]>(
+      intervalo ? `/salas?inicio=${intervalo.inicio.toISOString()}&fim=${intervalo.fim.toISOString()}` : '/salas',
+    ),
   buscarSala: (id: string) => chamarApi<Sala>(`/salas/${encodeURIComponent(id)}`),
   listarUsuarios: () => chamarApi<Usuario[]>('/usuarios'),
   listarReservasDaSala: (id: string, de: Date, ate: Date) =>
@@ -59,4 +64,11 @@ export const api = {
     ),
   criarReserva: (dados: DadosNovaReserva, usuarioId: string) =>
     chamarApi<Reserva>('/reservas', { method: 'POST', body: JSON.stringify(dados), headers: comoUsuario(usuarioId) }),
+  minhasReservas: (usuarioId: string) =>
+    chamarApi<ReservaComSala[]>('/reservas/minhas', { headers: comoUsuario(usuarioId) }),
+  cancelarReserva: (id: string, usuarioId: string) =>
+    chamarApi<Reserva>(`/reservas/${encodeURIComponent(id)}/cancelar`, {
+      method: 'POST',
+      headers: comoUsuario(usuarioId),
+    }),
 }

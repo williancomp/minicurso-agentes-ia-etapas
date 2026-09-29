@@ -1,21 +1,17 @@
-# Handoff — 30/09
+# Handoff — 01/10, após a funcionalidade 2
 
 ## Estado
-- Criar reserva implementado conforme `docs/spec.md` (CA-01..CA-06).
-- Regras em `src/domain/reservas.ts` (`validarReserva`, `intervalosSeSobrepoem`); API `POST /api/reservas`;
-  diálogo "Nova reserva" na página da sala (também abre ao clicar num horário vazio da agenda).
-- `npm test`, `npm run lint` e `npm run test:aceitacao` passando.
+- Funcionalidade 1 (criar reserva, CA-01..CA-06) e funcionalidade 2 (minhas reservas, cancelamento e
+  disponibilidade, CA-07..CA-13) implementadas; tarefas T001..T017 de `specs/001-minhas-reservas/tasks.md` concluídas.
+- `npm test`, `npm run lint`, `npm run build` e `npm run test:aceitacao` passando.
 
 ## Decisões
-- Intervalo semiaberto [início, fim): horários encostados são permitidos (CA-05).
-- Reservas canceladas e de outras salas não bloqueiam (CA-06).
-- Início exatamente igual a "agora" é aceito (CA-03).
-- A API valida tudo, mesmo que a interface já valide.
+- Só o dono cancela, verificado na API (403 `NAO_E_DONO`); reserva iniciada não se cancela (`JA_INICIADA`).
+- Cancelar muda o status (não apaga); cancelada não bloqueia horário.
+- Disponibilidade reutiliza a regra de sobreposição da funcionalidade 1 (encostado = disponível).
 
 ## Problemas conhecidos
-- Ainda não existe cancelamento nem "minhas reservas" (fora do escopo da funcionalidade 1).
-- Não há restrição de horário de funcionamento na API; a interface oferece só 07:00–22:00.
+- Nenhum conhecido.
 
 ## Próximo passo
-- Especificar e implementar "Minhas reservas e cancelamento" com o Spec Kit, mantendo as assinaturas
-  de `docs/api-dominio.md`.
+- Revisão independente do código e dos testes; registrar a evidência em `docs/verification.md`.

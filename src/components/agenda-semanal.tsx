@@ -3,6 +3,7 @@ import { ptBR } from 'date-fns/locale'
 import { useEffect, useState } from 'react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { HORA_ABERTURA, HORA_FECHAMENTO, mesmoDia, posicionarNaGrade } from '@/domain/agenda'
+import { horariosLivres } from '@/domain/minhas-reservas'
 import type { Reserva, Usuario } from '@/domain/tipos'
 import { cn } from '@/lib/utils'
 
@@ -26,6 +27,34 @@ function corDoUsuario(usuarioId: string) {
 
 const hora = (iso: string) => format(new Date(iso), 'HH:mm')
 
+/** Arredonda para cima, na próxima meia hora. */
+function proximaMeiaHora(data: Date) {
+  const resultado = new Date(data)
+  const minutos = resultado.getMinutes()
+  if (minutos % 30 !== 0 || resultado.getSeconds() || resultado.getMilliseconds()) {
+    resultado.setMinutes(minutos < 30 ? 30 : 60, 0, 0)
+  }
+  return resultado
+}
+
+/** Lacunas livres de um dia (a partir de agora, se for hoje), já posicionadas na grade. */
+function lacunasDoDia(reservas: Reserva[], salaId: string, dia: Date, agora: Date) {
+  const abertura = new Date(dia)
+  abertura.setHours(HORA_ABERTURA, 0, 0, 0)
+  const fechamento = new Date(dia)
+  fechamento.setHours(HORA_FECHAMENTO, 0, 0, 0)
+  const inicio = new Date(Math.max(abertura.getTime(), proximaMeiaHora(agora).getTime()))
+  if (inicio >= fechamento) return []
+  const total = fechamento.getTime() - abertura.getTime()
+  return horariosLivres(reservas, salaId, { inicio: inicio.toISOString(), fim: fechamento.toISOString() })
+    .filter((livre) => Date.parse(livre.fim) - Date.parse(livre.inicio) >= 30 * 60_000)
+    .map((livre) => ({
+      ...livre,
+      topo: ((Date.parse(livre.inicio) - abertura.getTime()) / total) * 100,
+      altura: ((Date.parse(livre.fim) - Date.parse(livre.inicio)) / total) * 100,
+    }))
+}
+
 function useAgora() {
   const [agora, setAgora] = useState(() => new Date())
   useEffect(() => {
@@ -41,9 +70,12 @@ export function AgendaSemanal({
   usuarios,
   usuarioAtualId,
   aoSelecionarHorario,
+  salaId,
   className,
 }: {
   className?: string
+  /** Quando informado, os horários livres da sala aparecem destacados na grade. */
+  salaId?: string
   dias: Date[]
   reservas: Reserva[]
   usuarios: Usuario[]
@@ -126,6 +158,24 @@ export function AgendaSemanal({
                     style={{ top: i * ALTURA_HORA }}
                   />
                 ))}
+
+                {salaId &&
+                  !passado &&
+                  lacunasDoDia(reservas, salaId, dia, agora).map((livre) => (
+                    <button
+                      key={livre.inicio}
+                      type="button"
+                      disabled={!aoSelecionarHorario}
+                      onClick={() => aoSelecionarHorario?.(proximaMeiaHora(new Date(livre.inicio)))}
+                      className="group/livre border-success/25 bg-success/[0.04] hover:border-success/60 hover:bg-success/10 focus-visible:ring-success/40 absolute inset-x-1 cursor-pointer rounded-lg border border-dashed px-2 py-1 text-left text-[11px] transition-colors outline-none focus-visible:ring-2 disabled:cursor-default"
+                      style={{ top: `${livre.topo}%`, height: `${livre.altura}%` }}
+                      aria-label={`Livre das ${hora(livre.inicio)} às ${hora(livre.fim)}. Reservar.`}
+                    >
+                      <span className="text-success font-medium opacity-0 transition-opacity group-hover/livre:opacity-100 group-focus-visible/livre:opacity-100">
+                        + Livre {hora(livre.inicio)}–{hora(livre.fim)}
+                      </span>
+                    </button>
+                  ))}
 
                 {posicionarNaGrade(reservas, dia).map(({ reserva, topo, altura }) => {
                   const minha = reserva.usuarioId === usuarioAtualId

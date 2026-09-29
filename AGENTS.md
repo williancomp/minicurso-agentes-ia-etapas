@@ -5,7 +5,7 @@ Instruções para agentes de código (OpenCode, Claude Code etc.) que trabalham 
 ## O projeto
 
 Sistema de reserva de salas e laboratórios da UFMT. Front-end React + API Hono + SQLite embutido no Node.
-Especificações ficam em `docs/` (comece por `docs/spec.md`).
+Especificações: `docs/spec.md` (criar reserva) e `specs/001-minhas-reservas/` (funcionalidade 2, Spec Kit).
 O contrato das funções de domínio (nomes, parâmetros e códigos de erro) está em `docs/api-dominio.md`:
 **não mude essas assinaturas** — os testes de aceitação dependem delas.
 

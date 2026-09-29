@@ -15,15 +15,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { HORA_ABERTURA, HORA_FECHAMENTO } from '@/domain/agenda'
 import type { Sala } from '@/domain/tipos'
 import { api } from '@/lib/api'
+import { HORARIOS, intervaloLocal } from '@/lib/horarios'
 import { useUsuario } from '@/lib/usuario'
 
-const HORARIOS = Array.from({ length: (HORA_FECHAMENTO - HORA_ABERTURA) * 2 + 1 }, (_, i) => {
-  const minutos = HORA_ABERTURA * 60 + i * 30
-  return `${String(Math.floor(minutos / 60)).padStart(2, '0')}:${String(minutos % 60).padStart(2, '0')}`
-})
 const MAXIMO_MOTIVO = 120
 
 export interface SugestaoHorario {
@@ -84,13 +80,9 @@ function Formulario({ sala, sugestao, aoConcluir }: { sala: Sala; sugestao?: Sug
     setErro(undefined)
     try {
       // Os campos estão na hora local do navegador; a API recebe ISO 8601 em UTC.
+      const { inicio, fim } = intervaloLocal(valores.data, valores.inicio, valores.fim)
       await api.criarReserva(
-        {
-          salaId: sala.id,
-          inicio: new Date(`${valores.data}T${valores.inicio}`).toISOString(),
-          fim: new Date(`${valores.data}T${valores.fim}`).toISOString(),
-          motivo: valores.motivo,
-        },
+        { salaId: sala.id, inicio: inicio.toISOString(), fim: fim.toISOString(), motivo: valores.motivo },
         usuarioAtual.id,
       )
       toast.success('Reserva criada!', {

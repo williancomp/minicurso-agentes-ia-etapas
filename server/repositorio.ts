@@ -1,4 +1,4 @@
-import type { Reserva, Sala, Usuario } from '../src/domain/tipos'
+import type { Reserva, ReservaComSala, Sala, Usuario } from '../src/domain/tipos'
 import type { Banco } from './db'
 
 type Linha = Record<string, unknown>
@@ -93,4 +93,40 @@ export function inserirReserva(db: Banco, reserva: Reserva): void {
     reserva.status,
     reserva.criadaEm,
   )
+}
+
+export function buscarReserva(db: Banco, id: string): Reserva | undefined {
+  const linha = db.prepare('SELECT * FROM reservas WHERE id = ?').get(id) as Linha | undefined
+  return linha ? paraReserva(linha) : undefined
+}
+
+export function marcarComoCancelada(db: Banco, id: string): void {
+  db.prepare("UPDATE reservas SET status = 'cancelada' WHERE id = ?").run(id)
+}
+
+/** Todas as reservas do usuário (qualquer status), com nome e bloco da sala. */
+export function listarReservasDoUsuario(db: Banco, usuarioId: string): ReservaComSala[] {
+  const linhas = db
+    .prepare(
+      `SELECT r.*, s.nome AS sala_nome, s.bloco AS sala_bloco, s.tipo AS sala_tipo
+       FROM reservas r JOIN salas s ON s.id = r.sala_id
+       WHERE r.usuario_id = ?
+       ORDER BY r.inicio`,
+    )
+    .all(usuarioId) as Linha[]
+  return linhas.map((linha) => ({
+    ...paraReserva(linha),
+    sala: {
+      id: String(linha.sala_id),
+      nome: String(linha.sala_nome),
+      bloco: String(linha.sala_bloco),
+      tipo: linha.sala_tipo as Sala['tipo'],
+    },
+  }))
+}
+
+/** Reservas de todas as salas que tocam o intervalo [de, ate), de qualquer status. */
+export function listarReservasNoIntervalo(db: Banco, de: string, ate: string): Reserva[] {
+  const linhas = db.prepare('SELECT * FROM reservas WHERE inicio < ? AND fim > ?').all(ate, de) as Linha[]
+  return linhas.map(paraReserva)
 }
