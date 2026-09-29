@@ -1,4 +1,4 @@
-import { HORA_ABERTURA, HORA_FECHAMENTO } from '@/domain/agenda'
+import { HORA_ABERTURA, HORA_FECHAMENTO } from '../domain/agenda'
 
 /** Horários de meia em meia hora dentro do expediente: 07:00, 07:30, …, 22:00. */
 export const HORARIOS = Array.from({ length: (HORA_FECHAMENTO - HORA_ABERTURA) * 2 + 1 }, (_, i) => {
